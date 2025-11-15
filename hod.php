@@ -304,9 +304,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
 </head>
 <body>
     <div class="container">
-        <h1><?php echo htmlspecialchars($sectionName); ?></h1>
+        <h1>Welcome  Admin, <?php echo htmlspecialchars($_SESSION['username']); ?></h1>
         <div class="top-buttons" style="display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+            <?php if ($_SESSION['id'] == 1): ?>
             <button onclick="window.location.href='super_admin.php'" class="btn btn-sm btn-primary">Manage Admins</button>
+            <?php endif; ?>
             <button onclick="window.location.href='verify_clearance.php'" class="btn btn-sm btn-success">Verify Document</button>
             <button onclick="window.location.href='cleared_list.php'" class="btn btn-sm btn-info">View Cleared List</button>
             <button onclick="window.location.href='disqualified.php'" class="btn btn-sm btn-warning">Upload Disqualified</button>
