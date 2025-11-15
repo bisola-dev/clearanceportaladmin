@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['document_id'])) {
 
         // Query to find matching clearance records by Document ID
         $query = "SELECT
-                    c.matricnum,
+                    dv.matricnum,
                     c.surname,
                     c.firstname,
                     c.othername,
@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['document_id'])) {
                     dv.status as doc_status
                   FROM [Final_Clearance].[dbo].[Document_Verification] dv
                   INNER JOIN [Final_Clearance].[dbo].[vw_graduandslist] c ON dv.matricnum = c.matricnum
-                  INNER JOIN [student].[dbo].[vw_programme_type] pt ON c.programmetypeid = pt.programmetypeid
+                  LEFT JOIN [student].[dbo].[vw_programme_type] pt ON c.programmetypeid = pt.programmetypeid
                   WHERE dv.document_id = ? AND dv.status = 1";
 
         $stmt = sqlsrv_query($conn, $query, [$documentId]);
@@ -45,6 +45,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['document_id'])) {
             if ($paymentStmt && sqlsrv_has_rows($paymentStmt)) {
                 $paymentResult = sqlsrv_fetch_array($paymentStmt, SQLSRV_FETCH_ASSOC);
                 $verificationResult['payment_verified'] = $paymentResult['count'] > 0;
+            }
+
+            // Check clearance status: if no entries in Clearance_Request, considered cleared; if entries exist, all must have status=1
+            $clearanceQuery = "SELECT status FROM [Final_Clearance].[dbo].[Clearance_Request] WHERE matricno = ?";
+            $clearanceStmt = sqlsrv_query($conn, $clearanceQuery, [$verificationResult['matricnum']]);
+            $verificationResult['cleared'] = true; // default true
+            if ($clearanceStmt && sqlsrv_has_rows($clearanceStmt)) {
+                $allCleared = true;
+                while ($row = sqlsrv_fetch_array($clearanceStmt, SQLSRV_FETCH_ASSOC)) {
+                    if ($row['status'] != 1) {
+                        $allCleared = false;
+                        break;
+                    }
+                }
+                $verificationResult['cleared'] = $allCleared;
             }
 
             $message = "Document ID verified successfully!";
@@ -284,8 +299,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['document_id'])) {
             </div>
             <div class="detail-row">
                 <div class="detail-label">Clearance Status:</div>
-                <div class="detail-value <?php echo $verificationResult['payment_verified'] ? 'status-verified' : 'status-unverified'; ?>">
-                    <?php echo $verificationResult['payment_verified'] ? 'CLEARED FOR GRADUATION' : 'NOT CLEARED'; ?>
+                <div class="detail-value <?php echo $verificationResult['cleared'] ? 'status-verified' : 'status-unverified'; ?>">
+                    <?php echo $verificationResult['cleared'] ? 'CLEARED FOR GRADUATION' : 'NOT CLEARED'; ?>
                 </div>
             </div>
         </div>
